@@ -47,7 +47,8 @@ export async function runActiveScan(url) {
   if (targets.size === 0) {
     results.push(makeResult('INFO', 'Teste Ativo', 'Nenhum parâmetro encontrado',
       'Não foram encontrados links com parâmetros GET na página inicial para testar.',
-      'Informe uma URL com parâmetros (ex: pagina.php?id=1) para testes ativos mais completos.'));
+      'Informe uma URL com parâmetros (ex: pagina.php?id=1) para testes ativos mais completos.',
+      null, null));
     return results;
   }
 
@@ -79,7 +80,8 @@ async function testReflectedXss(target) {
       if (body.includes(XSS_PAYLOAD)) {
         results.push(makeResult('HIGH', 'XSS', `Possível XSS refletido no parâmetro '${param}'`,
           `O valor injetado foi refletido na resposta sem sanitização/encoding em: ${target}`,
-          'Realize output encoding (HTML entity encoding) e considere uma CSP restritiva.', 'xss'));
+          'Realize output encoding (HTML entity encoding) e considere uma CSP restritiva.',
+          'xss', 'xss'));
       }
     } catch {
       // requisição falhou para este parâmetro; segue para o próximo
@@ -98,7 +100,8 @@ async function testSqlErrorInjection(target) {
         if (pattern.test(body)) {
           results.push(makeResult('CRITICAL', 'SQL Injection', `Possível SQL Injection no parâmetro '${param}'`,
             `A injeção de caractere de aspas gerou uma mensagem de erro de banco de dados em: ${target}`,
-            'Utilize prepared statements / queries parametrizadas e nunca concatene entrada do usuário em SQL.', 'sqli'));
+            'Utilize prepared statements / queries parametrizadas e nunca concatene entrada do usuário em SQL.',
+            'sqli', 'sqli'));
           break;
         }
       }

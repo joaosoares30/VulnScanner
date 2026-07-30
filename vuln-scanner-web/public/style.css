@@ -381,3 +381,125 @@ body {
   color: var(--text-dim);
   font-family: var(--font-mono);
 }
+/* === EXPLORAÇÃO PRÁTICA === */
+.exploitation-section {
+  border-left: 4px solid #dc3545;
+  background: #2d1b1b;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+}
+
+.exploitation-section strong {
+  color: #ff6b6b;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.exploit-content {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #1a1a1a;
+  padding: 14px 16px;
+  border-radius: 6px;
+  margin-top: 8px;
+  color: #e0e0e0;
+  overflow-x: auto;
+}
+
+.exploit-content code {
+  background: #2a2a2a;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  color: #ffb86b;
+}
+
+.exploit-content pre {
+  background: #111;
+  padding: 10px 14px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid #333;
+}
+
+/* === RESUMO POR SEVERIDADE === */
+.sum-CRITICAL { color: #dc3545; font-weight: 700; }
+.sum-HIGH { color: #fd7e14; font-weight: 600; }
+.sum-MEDIUM { color: #ffc107; font-weight: 600; }
+.sum-LOW { color: #17a2b8; }
+.sum-INFO { color: #6c757d; }
+
+/* === ITENS DE RESULTADO === */
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a2a;
+  transition: background 0.15s;
+}
+
+.result-item:hover { background: #2a2a2a; }
+.result-item.selected { background: #333; border-left: 3px solid #0d6efd; }
+
+.sev-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  min-width: 50px;
+  text-align: center;
+}
+
+.sev-CRITICAL { background: #dc3545; color: #fff; }
+.sev-HIGH { background: #fd7e14; color: #fff; }
+.sev-MEDIUM { background: #ffc107; color: #000; }
+.sev-LOW { background: #17a2b8; color: #fff; }
+.sev-INFO { background: #6c757d; color: #fff; }
+
+.item-title { flex: 1; font-size: 0.9rem; }
+.item-cat { color: #888; font-size: 0.78rem; }
+
+/* === PAINEL DE DETALHES === */
+.detail-header { margin-bottom: 16px; }
+.detail-header h3 { margin: 0 0 4px; font-size: 1.1rem; }
+.detail-meta { color: #888; font-size: 0.85rem; }
+
+.detail-section {
+  margin-bottom: 14px;
+  padding: 10px 0;
+}
+
+.detail-section strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #ccc;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-section p { margin: 0; line-height: 1.6; color: #bbb; }
+
+.detail-section a {
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.detail-section a:hover { text-decoration: underline; }
+
+.detail-placeholder {
+  color: #555;
+  text-align: center;
+  padding: 40px 20px;
+}

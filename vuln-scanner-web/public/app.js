@@ -88,8 +88,8 @@ function renderResults() {
 
   summaryStrip.innerHTML = SEVERITY_ORDER
     .filter((sev) => counts[sev])
-    .map((sev) => `<span class="summary-pill sev-${sev}">${sev} · ${counts[sev]}</span>`)
-    .join('');
+    .map((sev) => `<span class="sum-${sev}">${sev} · ${counts[sev]}</span>`)
+    .join(' | ');
 
   currentResults.forEach((r, idx) => {
     const li = document.createElement('li');
@@ -97,10 +97,8 @@ function renderResults() {
     li.dataset.idx = String(idx);
     li.innerHTML = `
       <span class="sev-badge sev-${r.severity}">${r.severity}</span>
-      <span class="result-text">
-        <span class="result-title">${escapeHtml(r.title)}</span>
-        <span class="result-category">${escapeHtml(r.category)}</span>
-      </span>
+      <span class="item-title">${escapeHtml(r.title)}</span>
+      <span class="item-cat">${escapeHtml(r.category)}</span>
     `;
     li.addEventListener('click', () => selectResult(idx));
     resultsList.appendChild(li);
@@ -114,25 +112,35 @@ function selectResult(idx) {
   if (active) active.classList.add('selected');
 
   const referenceBlock = r.reference
-    ? `<div class="detail-block">
-        <span class="detail-label">SAIBA MAIS</span>
-        <a class="detail-link" href="${escapeHtml(r.reference.url)}" target="_blank" rel="noopener noreferrer">
-          ${escapeHtml(r.reference.label)} ↗
-        </a>
-      </div>`
+    ? `<div class="detail-section">
+          <strong>🔗 SAIBA MAIS</strong>
+          <a href="${escapeHtml(r.reference.url)}" target="_blank" rel="noopener">
+            ${escapeHtml(r.reference.label)} ↗
+          </a>
+        </div>`
+    : '';
+
+  const exploitationBlock = r.exploitation
+    ? `<div class="detail-section exploitation-section">
+          <strong>💀 EXPLORAÇÃO PRÁTICA</strong>
+          <div class="exploit-content">${r.exploitation}</div>
+        </div>`
     : '';
 
   detailPane.innerHTML = `
-    <h3>${escapeHtml(r.title)}</h3>
-    <div class="detail-meta">${escapeHtml(r.category)} · <span class="sev-${r.severity}">${r.severity}</span></div>
-    <div class="detail-block">
-      <span class="detail-label">DESCRIÇÃO</span>
-      ${escapeHtml(r.description)}
+    <div class="detail-header">
+      <h3>${escapeHtml(r.title)}</h3>
+      <span class="detail-meta">${escapeHtml(r.category)} · ${r.severity}</span>
     </div>
-    <div class="detail-block">
-      <span class="detail-label">RECOMENDAÇÃO</span>
-      ${escapeHtml(r.recommendation)}
+    <div class="detail-section">
+      <strong>📋 DESCRIÇÃO</strong>
+      <p>${escapeHtml(r.description)}</p>
     </div>
+    <div class="detail-section">
+      <strong>🛡️ RECOMENDAÇÃO</strong>
+      <p>${escapeHtml(r.recommendation)}</p>
+    </div>
+    ${exploitationBlock}
     ${referenceBlock}
   `;
 }
@@ -146,6 +154,11 @@ function exportReport() {
     text += `[${r.severity}] (${r.category}) ${r.title}\n`;
     text += `  Descrição: ${r.description}\n`;
     text += `  Recomendação: ${r.recommendation}\n`;
+    if (r.exploitation) {
+      text += `  Exploração:\n`;
+      const stripped = r.exploitation.replace(/<[^>]+>/g, '');
+      text += `    ${stripped.split('\n').join('\n    ')}\n`;
+    }
     if (r.reference) {
       text += `  Saiba mais: ${r.reference.label} — ${r.reference.url}\n`;
     }

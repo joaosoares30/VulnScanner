@@ -7,138 +7,108 @@ const UA = 'VulnScannerWeb/1.0 (uso autorizado apenas)';
 const HEADER_CHECKS = [
   ['strict-transport-security', 'MEDIUM', 'Ausência de HSTS',
     'Sem HSTS, navegadores podem se conectar via HTTP antes do redirecionamento, permitindo ataques de downgrade.',
-    "Adicione o header 'Strict-Transport-Security: max-age=31536000; includeSubDomains'.", 'hsts'],
+    "Adicione o header 'Strict-Transport-Security: max-age=31536000; includeSubDomains'.", 'hsts', 'hsts'],
   ['content-security-policy', 'MEDIUM', 'Ausência de Content-Security-Policy',
     'Sem CSP, o site fica mais vulnerável a ataques de XSS e injeção de conteúdo.',
-    'Defina uma política CSP restritiva adequada à aplicação.', 'csp'],
+    'Defina uma política CSP restritiva adequada à aplicação.', 'csp', 'csp'],
   ['x-frame-options', 'LOW', 'Ausência de X-Frame-Options',
     'O site pode ser incorporado em um iframe de terceiros, possibilitando clickjacking.',
-    "Adicione 'X-Frame-Options: DENY' ou 'SAMEORIGIN', ou use CSP frame-ancestors.", 'clickjacking'],
+    "Adicione 'X-Frame-Options: DENY' ou 'SAMEORIGIN', ou use CSP frame-ancestors.", 'clickjacking', 'clickjacking'],
   ['x-content-type-options', 'LOW', 'Ausência de X-Content-Type-Options',
     'Navegadores podem tentar adivinhar o tipo de conteúdo (MIME sniffing), abrindo brechas de segurança.',
-    "Adicione 'X-Content-Type-Options: nosniff'.", 'mimeSniffing'],
+    "Adicione 'X-Content-Type-Options: nosniff'.", 'mimeSniffing', 'mimeSniffing'],
   ['referrer-policy', 'INFO', 'Ausência de Referrer-Policy',
     'URLs completas podem vazar para sites de terceiros via header Referer.',
-    "Adicione 'Referrer-Policy: strict-origin-when-cross-origin' ou política mais restritiva.", 'referrer'],
+    "Adicione 'Referrer-Policy: strict-origin-when-cross-origin' ou política mais restritiva.", 'referrer', 'referrer'],
 ];
 
 const INFO_HEADERS = ['server', 'x-powered-by', 'x-aspnet-version'];
 
-// Caminhos comumente sensíveis: a checagem apenas verifica se ficaram
-// publicamente acessíveis por engano (erro de deploy/configuração), sem
-// tentar ler ou extrair o conteúdo além de confirmar o status HTTP.
 const SENSITIVE_PATHS = [
-  '/.git/HEAD',
-  '/.git/config',
-  '/.env',
-  '/.env.local',
-  '/wp-config.php.bak',
-  '/config.php.bak',
-  '/.DS_Store',
-  '/backup.zip',
-  '/.aws/credentials',
+  '/.git/config', '/.env', '/.env.example', '/.env.local',
+  '/backup', '/backups', '/dump.sql', '/database.sql',
+  '/wp-config.php.bak', '/config.php.old', '/.htaccess',
+  '/admin/', '/api/', '/swagger.json', '/swagger-ui/',
+  '/robots.txt', '/sitemap.xml',
 ];
 
-const CSRF_TOKEN_HINTS = ['csrf', 'token', 'authenticity_token', '_token', 'xsrf', 'nonce'];
+const CSRF_TOKEN_HINTS = [
+  'csrf', 'token', '_token', 'authenticity_token',
+  'xsrf', '__requestverificationtoken', 'nonce',
+];
 
-export async function runPassiveScan(url) {
+// ---- Headers de segurança ----
+function checkHeaders(respHeaders) {
   const results = [];
-  const target = new URL(url);
-  let response;
-  let html = '';
-
-  try {
-    response = await fetch(url, {
-      redirect: 'follow',
-      headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(15000),
-    });
-    html = await response.text();
-  } catch (err) {
-    results.push(makeResult('INFO', 'Conexão', 'Falha ao conectar',
-      `Não foi possível completar a requisição HTTP: ${err.message}`,
-      'Verifique se a URL está correta e acessível.'));
-    return results;
-  }
-
-  results.push(...checkHeaders(response.headers));
-  results.push(...checkCookies(response.headers));
-  results.push(...checkInfoDisclosure(response.headers));
-  results.push(...checkCsrfForms(html));
-
-  if (target.protocol === 'https:') {
-    results.push(...await checkSsl(target.hostname));
-  } else {
-    results.push(makeResult('HIGH', 'Transporte', 'Site não usa HTTPS',
-      'A conexão inicial não é criptografada, expondo dados a interceptação (MITM).',
-      'Habilite HTTPS com um certificado válido e redirecione HTTP para HTTPS.', 'transportSec'));
-  }
-
-  results.push(...await checkExposedPaths(target));
-  results.push(...await checkCors(url));
-
-  return results;
-}
-
-function checkHeaders(headers) {
-  const results = [];
-  for (const [header, severity, title, description, recommendation, ref] of HEADER_CHECKS) {
-    if (!headers.has(header)) {
-      results.push(makeResult(severity, 'Headers HTTP', title, description, recommendation, ref));
+  for (const [header, severity, title, desc, rec, refKey, exploitKey] of HEADER_CHECKS) {
+    if (!(header in respHeaders)) {
+      results.push(makeResult(severity, 'Header de Segurança', title, desc, rec, refKey, exploitKey));
     }
   }
   return results;
 }
 
-function checkCookies(headers) {
-  const results = [];
-  const raw = typeof headers.getSetCookie === 'function'
-    ? headers.getSetCookie()
-    : (headers.get('set-cookie') ? [headers.get('set-cookie')] : []);
-
-  for (const cookie of raw) {
-    const name = cookie.split('=')[0].trim();
-    const lower = cookie.toLowerCase();
-
-    if (!lower.includes('secure')) {
-      results.push(makeResult('MEDIUM', 'Cookies', `Cookie sem flag Secure: ${name}`,
-        'O cookie pode ser transmitido em conexões não criptografadas.',
-        "Adicione o atributo 'Secure' ao cookie.", 'session'));
-    }
-    if (!lower.includes('httponly')) {
-      results.push(makeResult('MEDIUM', 'Cookies', `Cookie sem flag HttpOnly: ${name}`,
-        'O cookie pode ser acessado via JavaScript, aumentando o impacto de um XSS.',
-        "Adicione o atributo 'HttpOnly' ao cookie.", 'session'));
-    }
-    if (!lower.includes('samesite')) {
-      results.push(makeResult('LOW', 'Cookies', `Cookie sem SameSite: ${name}`,
-        'O cookie pode ser enviado em requisições cross-site, facilitando CSRF.',
-        "Defina 'SameSite=Lax' ou 'SameSite=Strict' conforme o caso de uso.", 'csrf'));
-    }
-  }
-  return results;
-}
-
-function checkInfoDisclosure(headers) {
+// ---- Vazamento de informação em headers ----
+function checkInfoLeak(respHeaders) {
   const results = [];
   for (const h of INFO_HEADERS) {
-    const value = headers.get(h);
-    if (value) {
-      results.push(makeResult('INFO', 'Divulgação de Informação', `Header revela tecnologia: ${h}`,
-        `Valor exposto: '${value}'. Isso facilita a identificação de versões vulneráveis conhecidas.`,
-        'Remova ou ofusque esse header na configuração do servidor.', 'infoDisclosure'));
+    if (respHeaders[h]) {
+      const value = respHeaders[h];
+      results.push(makeResult('INFO', 'Vazamento de Informação',
+        `Header expõe tecnologia: ${h}: ${value}`,
+        'O header informa a tecnologia/versão usada no servidor, auxiliando um atacante a direcionar exploits.',
+        'Remova ou ofusque headers que divulguem versões de servidor/framework.',
+        'infoDisclosure', 'infoDisclosure'));
     }
   }
   return results;
 }
 
-/**
- * Verifica formulários que alteram estado (POST) em busca de um campo
- * oculto com nome típico de token anti-CSRF. É uma heurística: a ausência
- * de um campo com esses nomes não confirma a falha (o framework pode usar
- * outra defesa, como SameSite ou cabeçalhos customizados), por isso o
- * achado é reportado como severidade MEDIUM e não CRITICAL.
- */
+// ---- HTTPS ----
+function checkHttps(url) {
+  const results = [];
+  if (url.protocol !== 'https:') {
+    results.push(makeResult('HIGH', 'Transport Security', 'Site acessível via HTTP',
+      'O site respondeu em HTTP, o que significa que dados trafegam sem criptografia.',
+      'Redirecione todo tráfego HTTP para HTTPS e implemente HSTS.',
+      'transportSec', 'transportSec'));
+  }
+  return results;
+}
+
+// ---- Cookies (Set-Cookie) ----
+function checkCookieFlags(respHeaders) {
+  const results = [];
+  const setCookie = respHeaders['set-cookie'];
+  if (!setCookie) return results;
+
+  const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
+  for (const raw of cookies) {
+    const name = raw.split('=')[0] || '(desconhecido)';
+    const hasSecure = /;\s*secure\s*(;|$)/i.test(raw);
+    const hasHttpOnly = /;\s*httponly\s*(;|$)/i.test(raw);
+    const hasSameSite = /;\s*samesite=/i.test(raw);
+
+    if (!hasSecure) {
+      results.push(makeResult('MEDIUM', 'Cookie', `Cookie '${name}' sem flag Secure`,
+        'O cookie pode ser enviado em conexões HTTP, permitindo captura em MITM.',
+        'Adicione flag Secure.', 'session', 'session'));
+    }
+    if (!hasHttpOnly) {
+      results.push(makeResult('MEDIUM', 'Cookie', `Cookie '${name}' sem flag HttpOnly`,
+        'O cookie pode ser acessado via JavaScript, permitindo roubo via XSS.',
+        'Adicione flag HttpOnly.', 'session', 'session'));
+    }
+    if (!hasSameSite) {
+      results.push(makeResult('LOW', 'Cookie', `Cookie '${name}' sem flag SameSite`,
+        'O cookie pode ser enviado em requisições cross-site, aumentando risco de CSRF.',
+        'Adicione SameSite=Lax ou SameSite=Strict.', 'session', 'session'));
+    }
+  }
+  return results;
+}
+
+// ---- CSRF em formulários ----
 function checkCsrfForms(html) {
   const results = [];
   if (!html) return results;
@@ -162,18 +132,15 @@ function checkCsrfForms(html) {
         'Isso não confirma a vulnerabilidade — o framework pode usar outra proteção (ex.: cookie SameSite, ' +
         'cabeçalho customizado validado no backend) — mas merece verificação manual.',
         'Garanta que toda requisição que altera estado exija um token CSRF validado no servidor, ' +
-        'ou dependa de cookies SameSite=Strict/Lax combinados com verificação de origem.', 'csrf'));
+        'ou dependa de cookies SameSite=Strict/Lax combinados com verificação de origem.',
+        'csrf', 'csrf'));
     }
   });
 
   return results;
 }
 
-/**
- * Verifica se caminhos comumente sensíveis (ex.: .git, .env, backups) ficaram
- * expostos publicamente por erro de configuração. Apenas confere o status
- * HTTP da resposta — não baixa nem interpreta o conteúdo do arquivo.
- */
+// ---- Caminhos expostos ----
 async function checkExposedPaths(target) {
   const results = [];
   for (const path of SENSITIVE_PATHS) {
@@ -190,7 +157,7 @@ async function checkExposedPaths(target) {
           `O servidor retornou HTTP 200 para ${path}, indicando que esse arquivo/diretório ` +
           'pode estar publicamente acessível por erro de configuração de deploy.',
           'Bloqueie o acesso a esse caminho no servidor web e remova arquivos sensíveis do diretório público.',
-          'fileExposure'));
+          'fileExposure', 'fileExposure'));
       }
     } catch {
       // falha de rede pontual para este caminho; segue para o próximo
@@ -199,7 +166,7 @@ async function checkExposedPaths(target) {
   return results;
 }
 
-/** Verifica configuração de CORS enviando um Origin de teste (nenhum payload malicioso). */
+// ---- CORS ----
 async function checkCors(url) {
   const results = [];
   const testOrigin = 'https://vulnscan-cors-check.invalid';
@@ -217,13 +184,15 @@ async function checkCors(url) {
         "O servidor respondeu com 'Access-Control-Allow-Origin: *' junto de " +
         "'Access-Control-Allow-Credentials: true', uma combinação inválida e perigosa que " +
         'pode permitir que qualquer site leia respostas autenticadas.',
-        "Nunca combine '*' com credentials: true. Use uma lista de origens permitidas explícita.", 'cors'));
+        "Nunca combine '*' com credentials: true. Use uma lista de origens permitidas explícita.",
+        'cors', 'cors'));
     } else if (allowOrigin === testOrigin) {
       results.push(makeResult('HIGH', 'CORS',
         'CORS reflete a origem da requisição sem validação',
         `O servidor refletiu de volta a origem de teste '${testOrigin}' enviada, sem parecer validá-la ` +
         'contra uma lista de origens confiáveis.',
-        'Valide a origem contra uma lista explícita de domínios permitidos antes de refleti-la no header.', 'cors'));
+        'Valide a origem contra uma lista explícita de domínios permitidos antes de refleti-la no header.',
+        'cors', 'cors'));
     }
   } catch {
     // falha de rede pontual; não é um achado, apenas segue sem reportar
@@ -231,6 +200,7 @@ async function checkCors(url) {
   return results;
 }
 
+// ---- SSL/TLS ----
 function checkSsl(hostname) {
   return new Promise((resolve) => {
     const results = [];
@@ -248,7 +218,8 @@ function checkSsl(hostname) {
         if (['TLSv1', 'TLSv1.1', 'SSLv3'].includes(protocol)) {
           results.push(makeResult('HIGH', 'TLS', `Protocolo TLS obsoleto: ${protocol}`,
             'Versões antigas de TLS/SSL possuem vulnerabilidades conhecidas.',
-            'Desabilite TLS 1.0/1.1 e SSLv3; utilize TLS 1.2 ou 1.3.', 'tls'));
+            'Desabilite TLS 1.0/1.1 e SSLv3; utilize TLS 1.2 ou 1.3.',
+            'tls', 'tls'));
         }
 
         const cert = socket.getPeerCertificate();
@@ -258,11 +229,11 @@ function checkSsl(hostname) {
           if (daysLeft < 0) {
             results.push(makeResult('CRITICAL', 'TLS', 'Certificado expirado',
               `O certificado SSL expirou em ${cert.valid_to}.`,
-              'Renove o certificado imediatamente.', 'tls'));
+              'Renove o certificado imediatamente.', 'tls', 'tls'));
           } else if (daysLeft < 30) {
             results.push(makeResult('MEDIUM', 'TLS', 'Certificado próximo de expirar',
               `O certificado expira em ${daysLeft} dias.`,
-              'Programe a renovação do certificado.', 'tls'));
+              'Programe a renovação do certificado.', 'tls', 'tls'));
           }
         }
         socket.end();
@@ -273,7 +244,7 @@ function checkSsl(hostname) {
     socket.on('error', (err) => {
       results.push(makeResult('INFO', 'TLS', 'Não foi possível inspecionar o TLS',
         `Erro: ${err.message}`,
-        'Verifique manualmente a configuração SSL/TLS do servidor.', 'tls'));
+        'Verifique manualmente a configuração SSL/TLS do servidor.', 'tls', null));
       finish();
     });
 
@@ -281,8 +252,54 @@ function checkSsl(hostname) {
       socket.destroy();
       results.push(makeResult('INFO', 'TLS', 'Timeout ao inspecionar TLS',
         'A conexão para inspeção do certificado expirou.',
-        'Verifique manualmente a configuração SSL/TLS do servidor.', 'tls'));
+        'Verifique manualmente a configuração SSL/TLS do servidor.', 'tls', null));
       finish();
     });
   });
+}
+
+// ---- Função principal de exportação ----
+export async function runPassiveScan(url) {
+  const results = [];
+
+  // HTTPS check
+  results.push(...checkHttps(url));
+
+  try {
+    const resp = await fetch(url, {
+      headers: { 'User-Agent': UA },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const respHeaders = {};
+    for (const [key, value] of resp.headers.entries()) {
+      respHeaders[key.toLowerCase()] = value;
+    }
+
+    results.push(...checkHeaders(respHeaders));
+    results.push(...checkInfoLeak(respHeaders));
+    results.push(...checkCookieFlags(respHeaders));
+
+    const contentType = respHeaders['content-type'] || '';
+    if (contentType.includes('text/html')) {
+      const html = await resp.text();
+      results.push(...checkCsrfForms(html));
+    }
+
+    results.push(...await checkExposedPaths(url));
+    results.push(...await checkCors(url));
+  } catch (err) {
+    results.push(makeResult('INFO', 'Rede', 'Falha ao acessar o alvo',
+      `Não foi possível completar a varredura passiva: ${err.message}`,
+      'Verifique se a URL está acessível e se o servidor não está bloqueando o scanner.',
+      null, null));
+  }
+
+  // SSL check (só para HTTPS)
+  if (url.protocol === 'https:') {
+    results.push(...await checkSsl(url.hostname));
+  }
+
+  return results;
 }
