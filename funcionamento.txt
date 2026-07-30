@@ -1,4 +1,4 @@
-cd \Users\"seuUsuario"\Downloads\vuln-scanner-web
+cd \Users\seuUsuario\Downloads\vuln-scanner-web
 
 cd vuln-scanner-web
 
