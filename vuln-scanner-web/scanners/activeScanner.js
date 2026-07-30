@@ -36,18 +36,14 @@ export async function runActiveScan(url) {
       try {
         const abs = new URL(href, url).toString();
         if (abs.includes('?')) targets.add(abs);
-      } catch {
-        // href inválido; ignora este link
-      }
+      } catch {}
     });
-  } catch {
-    // crawling falhou; segue apenas com a URL original, se tiver parâmetros
-  }
+  } catch {}
 
   if (targets.size === 0) {
-    results.push(makeResult('INFO', 'Teste Ativo', 'Nenhum parâmetro encontrado',
-      'Não foram encontrados links com parâmetros GET na página inicial para testar.',
-      'Informe uma URL com parâmetros (ex: pagina.php?id=1) para testes ativos mais completos.',
+    results.push(makeResult('INFO', 'Teste Ativo', 'Nenhum parametro encontrado',
+      'Nao foram encontrados links com parametros GET na pagina inicial para testar.',
+      'Informe uma URL com parametros (ex: pagina.php?id=1) para testes ativos mais completos.',
       null, null));
     return results;
   }
@@ -78,14 +74,12 @@ async function testReflectedXss(target) {
       const resp = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(15000) });
       const body = await resp.text();
       if (body.includes(XSS_PAYLOAD)) {
-        results.push(makeResult('HIGH', 'XSS', `Possível XSS refletido no parâmetro '${param}'`,
-          `O valor injetado foi refletido na resposta sem sanitização/encoding em: ${target}`,
+        results.push(makeResult('HIGH', 'XSS', `Possivel XSS refletido no parametro '${param}'`,
+          `O valor injetado foi refletido na resposta sem sanitizacao/encoding em: ${target}`,
           'Realize output encoding (HTML entity encoding) e considere uma CSP restritiva.',
           'xss', 'xss'));
       }
-    } catch {
-      // requisição falhou para este parâmetro; segue para o próximo
-    }
+    } catch {}
   }
   return results;
 }
@@ -98,16 +92,14 @@ async function testSqlErrorInjection(target) {
       const body = await resp.text();
       for (const pattern of SQL_ERROR_PATTERNS) {
         if (pattern.test(body)) {
-          results.push(makeResult('CRITICAL', 'SQL Injection', `Possível SQL Injection no parâmetro '${param}'`,
-            `A injeção de caractere de aspas gerou uma mensagem de erro de banco de dados em: ${target}`,
-            'Utilize prepared statements / queries parametrizadas e nunca concatene entrada do usuário em SQL.',
+          results.push(makeResult('CRITICAL', 'SQL Injection', `Possivel SQL Injection no parametro '${param}'`,
+            `A injecao de caractere de aspas gerou uma mensagem de erro de banco de dados em: ${target}`,
+            'Utilize prepared statements / queries parametrizadas e nunca concatene entrada do usuario em SQL.',
             'sqli', 'sqli'));
           break;
         }
       }
-    } catch {
-      // requisição falhou para este parâmetro; segue para o próximo
-    }
+    } catch {}
   }
   return results;
 }
