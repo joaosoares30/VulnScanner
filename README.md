@@ -31,7 +31,7 @@ Sheet ou CWE correspondente, para quem quiser aprofundar.
 
 ## Praticar exploração (ambiente próprio)
 
-A pasta [`local-lab/`](local-lab/) sobe um ambiente local com **OWASP Juice Shop**
+A pasta [`local-lab/`](vuln-scanner-web/local-lab/README.md) sobe um ambiente local com **OWASP Juice Shop**
 e **DVWA** — aplicações propositalmente vulneráveis com guias oficiais de
 exploração — pra você estudar ataque, defesa e resposta a incidente na prática,
 sem depender de sites de terceiros. Veja `local-lab/README.md`.
