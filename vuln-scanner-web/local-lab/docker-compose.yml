@@ -1,0 +1,30 @@
+# Ambiente de estudo local — aplicações INTENCIONALMENTE vulneráveis,
+# criadas por projetos de segurança reconhecidos (OWASP e DVWA) para prática
+# de pentest em ambiente isolado e legal.
+#
+# Uso:
+#   cd local-lab
+#   docker compose up -d
+#
+# - Juice Shop:  http://localhost:3001   (guia de exploração oficial: https://pwning.owasp-juice.shop/)
+# - DVWA:        http://localhost:3002   (login padrão: admin / password, defina o "Security Level" em DVWA Security)
+#
+# Aponte o VULNSCAN (http://localhost:3000) para esses endereços para testar
+# o scanner contra alvos que você mesmo hospeda.
+#
+# Para derrubar o ambiente: docker compose down
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: vulnscan-lab-juiceshop
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
+
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: vulnscan-lab-dvwa
+    ports:
+      - "3002:80"
+    restart: unless-stopped

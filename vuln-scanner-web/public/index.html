@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VULNSCAN — Análise de vulnerabilidades web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="scanbeam" id="scanbeam"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">◈</span>
+    <span class="brand-name">VULNSCAN</span>
+  </div>
+  <span class="brand-tag">análise de superfície de ataque web</span>
+</header>
+
+<main class="layout">
+
+  <section class="panel disclaimer" role="note">
+    <strong>Não me resposabilizo pelas merdas que tu fizer.</strong> Faz o que quiser patrão, a noite é uma criança. Os testes ativos enviam requisições com payloads de teste (não destrutivos, por enquanto);
+    aplicá-los sem autorização pode configurar infração à Lei Maria do Foda-se e viadagens equivalentes, SENTA O DEDO NESSA PORRA.
+  </section>
+
+  <section class="panel target-panel">
+    <div class="target-frame">
+      <span class="corner corner-tl"></span>
+      <span class="corner corner-tr"></span>
+      <span class="corner corner-bl"></span>
+      <span class="corner corner-br"></span>
+
+      <label class="field-label" for="url-input">ALVO</label>
+      <div class="target-row">
+        <input id="url-input" class="url-input" type="text"
+               placeholder="exemplo.com ou exemplo.com/pagina.php?id=1" autocomplete="off">
+        <button id="scan-btn" class="btn-primary">
+          <span class="btn-label">ESCANEAR</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="options-row">
+      <label class="toggle-chip">
+        <input type="checkbox" id="chk-passive" checked>
+        <span>Análise passiva</span>
+        <em>headers · cookies · SSL/TLS</em>
+      </label>
+      <label class="toggle-chip">
+        <input type="checkbox" id="chk-active" checked>
+        <span>Testes ativos</span>
+        <em>XSS refletido · SQLi por erro</em>
+      </label>
+    </div>
+
+    <p id="status-line" class="status-line">aguardando alvo</p>
+  </section>
+
+  <section class="panel results-panel" id="results-panel" hidden>
+    <div class="results-header">
+      <h2>RESULTADOS</h2>
+      <div class="summary-strip" id="summary-strip"></div>
+      <button id="export-btn" class="btn-secondary">Exportar .txt</button>
+    </div>
+
+    <div class="results-body">
+      <ul class="results-list" id="results-list"></ul>
+      <div class="detail-pane" id="detail-pane">
+        <p class="detail-placeholder">Selecione um item para ver os detalhes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel empty-panel" id="empty-panel" hidden>
+    <p>Nenhum achado retornado para este alvo com as opções selecionadas.</p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>VULNSCAN — ferramenta educacional de varredura. Não substitui uma auditoria de segurança profissional.</span>
+  <p>Desenvolvido por João Soares e Auxiliado por Claude Code</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

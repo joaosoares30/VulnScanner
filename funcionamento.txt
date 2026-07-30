@@ -1,0 +1,9 @@
+cd \Users\JoaoSoares\Downloads\vuln-scanner-web
+
+cd vuln-scanner-web
+
+npm install
+
+npm start
+
+http://localhost:3000
