@@ -115,6 +115,6 @@ que foi feito para isso de forma segura e contida ao ambiente local.
 
 ## Documentação
 
-[Manual de Funcionamento](Documentação/manual-VulnScanner.md)
+[Manual e Funcionamento](Documentação/manual-VulnScanner.md)
 
 [Documentação Técnica Detalhada](Documentação/Documetação-tecnicaVulnScanner.md)
