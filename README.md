@@ -81,3 +81,9 @@ resultado em JSON para a interface renderizar.
 - Exportação em PDF/HTML
 - Suporte a autenticação (login) antes do scan
 - Histórico de varreduras (persistência em banco de dados)
+
+## Documentação
+
+[Manual de Funcionamento](Documentação/Analise-VulnScanner.pdf)
+
+[Análise Técnica](Documentação/Manual_vulnScanner.pdf)
